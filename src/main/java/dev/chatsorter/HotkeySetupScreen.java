@@ -10,7 +10,7 @@ public final class HotkeySetupScreen extends Screen {
     public HotkeySetupScreen(Screen parent){super(Component.literal("ChatSorter — назначение клавиши"));this.parent=parent;}
     @Override public void tick(){
         super.tick();if(minecraft==null)return;
-        long handle=minecraft.getWindow().getWindow();
+        long handle=minecraft.getWindow().handle();
         for(int k=GLFW.GLFW_KEY_SPACE;k<=GLFW.GLFW_KEY_LAST;k++){
             boolean pressed=GLFW.glfwGetKey(handle,k)==GLFW.GLFW_PRESS;
             if(wait<=0 && pressed && !previous[k] && k!=GLFW.GLFW_KEY_ESCAPE){AlertHotkey.assign(k);minecraft.setScreen(parent);return;}

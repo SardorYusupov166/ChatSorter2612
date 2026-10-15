@@ -17,7 +17,7 @@ public final class AlertHotkey {
     public static void assign(int newKey){key=newKey;wasDown=true;try{Files.createDirectories(PATH.getParent());Properties p=new Properties();p.setProperty("key",Integer.toString(key));try(var out=Files.newOutputStream(PATH)){p.store(out,"ChatSorter alert screen key");}}catch(Exception ignored){}}
     public static void tick(Minecraft mc){
         if(key<0 || mc.getWindow()==null)return;
-        boolean down=GLFW.glfwGetKey(mc.getWindow().getWindow(),key)==GLFW.GLFW_PRESS;
+        boolean down=GLFW.glfwGetKey(mc.getWindow().handle(),key)==GLFW.GLFW_PRESS;
         if(down && !wasDown && (mc.screen==null || mc.screen instanceof ChatScreen)) mc.setScreen(new AlertSettingsScreen(mc.screen));
         wasDown=down;
     }

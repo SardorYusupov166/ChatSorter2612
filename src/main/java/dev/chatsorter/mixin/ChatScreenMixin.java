@@ -147,7 +147,7 @@ public abstract class ChatScreenMixin extends Screen {
     private void chatsorter$pollDrag() {
         if (!chatsorter$dragging && !chatsorter$resizing) return;
         Minecraft mc = Minecraft.getInstance();
-        if (GLFW.glfwGetMouseButton(mc.getWindow().getWindow(), GLFW.GLFW_MOUSE_BUTTON_LEFT) != GLFW.GLFW_PRESS) {
+        if (GLFW.glfwGetMouseButton(mc.getWindow().handle(), GLFW.GLFW_MOUSE_BUTTON_LEFT) != GLFW.GLFW_PRESS) {
             if (chatsorter$resizing) mc.options.save();
             chatsorter$dragging = false;
             chatsorter$resizing = false;
