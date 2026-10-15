@@ -10,6 +10,9 @@ dependencies {
 }
 processResources { inputs.property 'version', project.version; filesMatching('fabric.mod.json') { expand version: project.version } }
 tasks.withType(JavaCompile).configureEach {
+    // Legacy Yarn mixins may remain in GitHub after a browser-based upload.
+    // Exclude them at the Gradle level to prevent obsolete classes from breaking the 26.1.2 build.
+    exclude '**/mixin/ChatHudMixin.java', '**/mixin/ChatHudAccess.java'
     options.release = 25
     options.encoding = 'UTF-8'
     options.compilerArgs.addAll(['-Xmaxerrs', '1000'])

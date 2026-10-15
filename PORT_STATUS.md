@@ -15,3 +15,9 @@ Changed:
 Verification: The ZIP and Java source trees have been checked locally, and class/method names were cross-checked against 26.1.2 Minecraft API reference. This environment has Java 21 and no external Gradle dependency access, hence a true 26.1.2 compile or in-game Mixin verification WAS NOT possible. Expect that follow-up compiler/runtime fixes may still be necessary.
 
 IMPORTANT: The archive is source code, not a playable JAR. Upload all project files, including .github, to your ChatSorter2612 repository and run GitHub Actions. If it fails, send the FIRST build errors (or attach the compilation log artifact). If it builds, test on a local world before connecting to multiplayer.
+
+## Follow-up compiler fixes (28-error build)
+- Legacy Yarn-era ChatHudMixin / ChatHudAccess are not included in the port source; GitHub's browser uploader does **not** delete them automatically. The Gradle JavaCompile exclude prevents them from being compiled if left in the repository. **Please delete both files in GitHub** for a clean source tree.
+- Changed Mojang OptionInstance getters/setters from getValue()/setValue() to get()/set().
+- Changed old Window.getHandle() calls to Window.getWindow() (26.1.2 still uses GLFW).
+- Not compile-verified here: rerun GitHub Actions and provide the next failure log if any.

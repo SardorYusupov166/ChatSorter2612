@@ -16,3 +16,11 @@ Minecraft 26.1.2 requires Java 25, Fabric Loom 1.18.2, and official Mojang names
 4. If failure, download `ChatSorter-26.1.2-compile-log` and share the first errors to diagnose them.
 
 Review `PORT_STATUS.md` for exact changes and limitations.
+
+
+### IMPORTANT: remove stale files from older GitHub uploads
+If the GitHub repo was updated via browser uploads, delete:
+- `src/main/java/dev/chatsorter/mixin/ChatHudMixin.java`
+- `src/main/java/dev/chatsorter/mixin/ChatHudAccess.java`
+
+They are obsolete 1.21.x mixins. This source archive intentionally does not contain them. The Gradle compile configuration also excludes them defensively until you remove them.
