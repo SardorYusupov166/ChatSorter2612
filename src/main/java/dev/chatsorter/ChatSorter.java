@@ -2,11 +2,11 @@ package dev.chatsorter;
 
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
-import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
+import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
+import net.minecraft.resources.Identifier;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.hud.ChatHud;
-import net.minecraft.text.Text;
+import net.minecraft.client.Minecraft;
+import net.minecraft.network.chat.Component;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -16,7 +16,6 @@ public class ChatSorter implements ClientModInitializer {
         public final String title; Tab(String title) { this.title = title; }
     }
     public static Tab selected = Tab.NEARBY;
-    private static boolean replaying = false;
     private static String searchQuery = "";
     public static String searchQuery() { return searchQuery; }
     public static void setSearchQuery(String query) {
@@ -26,18 +25,22 @@ public class ChatSorter implements ClientModInitializer {
         refreshChat();
     }
     public static boolean isSearching() { return !searchQuery.isEmpty(); }
+    // Vanilla 26.1.2 retains ALL messages and supports a visibility predicate.
+    // Unlike old clear/replay logic this doesn't erase signatures, timestamps or chat history.
     private static void refreshChat() {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        if (mc.player == null) return;
-        ChatHud hud = mc.inGameHud.getChatHud();
-        replaying = true;
-        try {
-            hud.clear(false);
-            List<Text> source = isSearching() ? history[Tab.ALL.ordinal()] : history[selected.ordinal()];
-            for (Text msg : source) {
-                if (!isSearching() || msg.getString().toLowerCase(Locale.ROOT).contains(searchQuery)) hud.addMessage(msg);
-            }
-        } finally { replaying = false; }
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.gui == null) return;
+        mc.gui.getChat().setVisibleMessageFilter(line -> shouldShow(line.content()));
+    }
+    public static boolean shouldShow(Component message) {
+        String str = message.getString();
+        if (isSearching()) return str.toLowerCase(Locale.ROOT).contains(searchQuery);
+        return selected == Tab.ALL || classifyForDisplay(str) == selected;
+    }
+    private static Tab classifyForDisplay(String str) {
+        if (str.startsWith("[ChatSorter]") || str.startsWith("Автор: ") || str.startsWith("Сервер: ")
+                || str.startsWith("ChatSorter 1.3.3 |")) return Tab.NEARBY;
+        return classify(str);
     }
     public static final int[] unread = new int[Tab.values().length];
     // The server may place the arrow either inside or outside the nickname bracket.
@@ -47,15 +50,15 @@ public class ChatSorter implements ClientModInitializer {
     private static final java.util.regex.Pattern PRIVATE_MESSAGE_OUTSIDE = java.util.regex.Pattern.compile(
         "^\\[(?:\\[~?[^\\]\\r\\n]+\\s+head\\])?~?[^\\]\\r\\n]{1,80}\\]\\s*(?:->|→|<-|←)\\s*(?:я|мне|me|[A-Za-z0-9_]{3,16})\\s+.+$",
         java.util.regex.Pattern.CASE_INSENSITIVE | java.util.regex.Pattern.UNICODE_CASE);
-    public static String timestamp(Text message) { return java.time.LocalTime.now().withNano(0).toString(); }
-    private static final java.util.IdentityHashMap<Text,String> times = new java.util.IdentityHashMap<>();
+    public static String timestamp(Component message) { return java.time.LocalTime.now().withNano(0).toString(); }
+    private static final java.util.IdentityHashMap<Component,String> times = new java.util.IdentityHashMap<>();
     private static final java.util.Map<String,String> latestTimes = new java.util.HashMap<>();
     public static String copyRenderedLine(String line) {
         return "[" + latestTimes.getOrDefault(line, java.time.LocalTime.now().withNano(0).toString()) + "] " + line;
     }
-    public static String copyText(Text text) { return "[" + times.getOrDefault(text, java.time.LocalTime.now().withNano(0).toString()) + "] " + text.getString(); }
+    public static String copyText(Component text) { return "[" + times.getOrDefault(text, java.time.LocalTime.now().withNano(0).toString()) + "] " + text.getString(); }
 
-    private static final List<Text>[] history = new List[]{new ArrayList<>(),new ArrayList<>(),new ArrayList<>(),new ArrayList<>(),new ArrayList<>()};
+    private static final List<Component>[] history = new List[]{new ArrayList<>(),new ArrayList<>(),new ArrayList<>(),new ArrayList<>(),new ArrayList<>()};
     @Override public void onInitializeClient() {
         ChatPosition.load();
         KeywordAlerts.load();
@@ -63,62 +66,55 @@ public class ChatSorter implements ClientModInitializer {
         AlertHotkey.load();
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             AlertHotkey.tick(client);
-            if (client.player != null && client.currentScreen == null && AlertHotkey.needsSetup()) AlertHotkey.prompt();
+            if (client.player != null && client.screen == null && AlertHotkey.needsSetup()) AlertHotkey.prompt();
         });
-        HudRenderCallback.EVENT.register((context, tickCounter) -> {
+        HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("chatsorter", "unread_dm"), (context, tickCounter) -> {
             int unreadDm = unread[Tab.DM.ordinal()];
             if (unreadDm <= 0) return;
-            MinecraftClient mc = MinecraftClient.getInstance();
-            if (mc.player == null || mc.options.hudHidden) return;
+            Minecraft mc = Minecraft.getInstance();
+            if (mc.player == null || mc.options.hideGui) return;
             String label = "ЛС: " + unreadDm + " непрочитанных";
-            int textWidth = mc.textRenderer.getWidth(label);
-            int right = context.getScaledWindowWidth() - 6;
-            int top = mc.currentScreen instanceof net.minecraft.client.gui.screen.ChatScreen ? 29 : 7;
+            int textWidth = mc.font.width(label);
+            int right = context.guiWidth() - 6;
+            int top = mc.screen instanceof net.minecraft.client.gui.screens.ChatScreen ? 29 : 7;
             context.fill(right - textWidth - 14, top, right, top + 18, 0xDD292D32);
             context.fill(right - textWidth - 14, top, right - textWidth - 11, top + 18, ChatTheme.bright());
-            context.drawTextWithShadow(mc.textRenderer, label, right - textWidth - 7, top + 5, 0xFFFFFFFF);
+            PortDraw.drawTextWithShadow(context,mc.font, label, right - textWidth - 7, top + 5, 0xFFFFFFFF);
         });
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
             // Start a fresh per-server history, then deliver the greeting locally.
             reset();
-            String serverName = client.getCurrentServerEntry() == null ? "singleplayer_or_unknown" : client.getCurrentServerEntry().address;
+            String serverName = client.getCurrentServer() == null ? "singleplayer_or_unknown" : client.getCurrentServer().ip;
             ChatSorterDiagnostics.startSession(serverName);
             client.execute(() -> {
                 if (client.player == null) return;
-                client.inGameHud.getChatHud().addMessage(Text.literal("[ChatSorter] Мод успешно загружен!").styled(style -> style.withColor(0x55FF55)));
-                client.inGameHud.getChatHud().addMessage(Text.literal("Автор: ").styled(style -> style.withColor(0xFFCC55))
-                    .append(Text.literal("mlpgod").styled(style -> style.withColor(0xFFFFFF))));
-                client.inGameHud.getChatHud().addMessage(Text.literal("Сервер: ").styled(style -> style.withColor(0xFFCC55))
-                    .append(Text.literal("MigosMC").styled(style -> style.withColor(0xFFFFFF))));
-                client.inGameHud.getChatHud().addMessage(Text.literal("ChatSorter 1.3.3 | mlpgod - MigosMC").styled(style -> style.withColor(0xAAAAAA)));
+                client.gui.getChat().addClientSystemMessage(Component.literal("[ChatSorter] Мод успешно загружен!").withStyle(style -> style.withColor(0x55FF55)));
+                client.gui.getChat().addClientSystemMessage(Component.literal("Автор: ").withStyle(style -> style.withColor(0xFFCC55))
+                    .append(Component.literal("mlpgod").withStyle(style -> style.withColor(0xFFFFFF))));
+                client.gui.getChat().addClientSystemMessage(Component.literal("Сервер: ").withStyle(style -> style.withColor(0xFFCC55))
+                    .append(Component.literal("MigosMC").withStyle(style -> style.withColor(0xFFFFFF))));
+                client.gui.getChat().addClientSystemMessage(Component.literal("ChatSorter 1.3.3 | mlpgod - MigosMC").withStyle(style -> style.withColor(0xAAAAAA)));
             });
         });
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> { ChatSorterDiagnostics.endSession(); reset(); });
     }
 
-    public static boolean capture(Text message) {
-        if (replaying) return true;
-        Tab tab = message.getString().startsWith("[ChatSorter]") || message.getString().startsWith("Автор: ") || message.getString().startsWith("Сервер: ") || message.getString().startsWith("ChatSorter 1.3.3 |")
-            ? Tab.NEARBY : classify(message.getString());
+    public static void capture(Component message) {
+        Tab tab = classifyForDisplay(message.getString());
         KeywordAlerts.notifyIfMatched(message.getString());
         ChatSorterDiagnostics.record(message, tab.name(), selected.name(), tab == selected || selected == Tab.ALL);
-        List<Text> messages = history[tab.ordinal()];
-        Text stored = message.copy();
+        List<Component> messages = history[tab.ordinal()];
+        Component stored = message.copy();
         messages.add(stored);
         times.put(stored, timestamp(message));
         latestTimes.put(message.getString(), times.get(stored));
-        List<Text> allMessages = history[Tab.ALL.ordinal()];
-        Text allStored = message.copy();
+        List<Component> allMessages = history[Tab.ALL.ordinal()];
+        Component allStored = message.copy();
         allMessages.add(allStored);
         times.put(allStored, times.get(stored));
         if (allMessages.size() > 300) times.remove(allMessages.remove(0));
         if (messages.size() > 300) times.remove(messages.remove(0));
         if (selected != tab && selected != Tab.ALL) { unread[tab.ordinal()]++; unread[Tab.ALL.ordinal()]++; }
-        if (isSearching()) {
-            if (message.getString().toLowerCase(Locale.ROOT).contains(searchQuery)) return true;
-            return false;
-        }
-        return tab == selected || selected == Tab.ALL;
     }
     // Server prefixes may contain formatting, non-breaking spaces or icon glyphs.
     private static final java.util.regex.Pattern GAME_TAG = java.util.regex.Pattern.compile(
@@ -148,16 +144,15 @@ public class ChatSorter implements ClientModInitializer {
         selected = tab;
         unread[tab.ordinal()] = 0;
         if (tab == Tab.ALL) java.util.Arrays.fill(unread, 0);
-        MinecraftClient mc = MinecraftClient.getInstance();
-        if (mc.player == null) return;
         refreshChat();
     }
     public static void reset() {
-        for (List<Text> messages : history) messages.clear();
+        for (List<Component> messages : history) messages.clear();
         times.clear();
         latestTimes.clear();
         java.util.Arrays.fill(unread, 0);
         selected = Tab.NEARBY;
         searchQuery = "";
+        refreshChat();
     }
 }

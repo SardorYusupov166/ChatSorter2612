@@ -1,6 +1,6 @@
 package dev.chatsorter;
 
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Properties;
@@ -9,7 +9,7 @@ import java.util.Properties;
 public final class ChatPosition {
     public static int x = 0;
     public static int y = 0;
-    private static final Path FILE = MinecraftClient.getInstance().runDirectory.toPath()
+    private static final Path FILE = Minecraft.getInstance().gameDirectory.toPath()
         .resolve("config").resolve("chatsorter-position.properties");
     private ChatPosition() {}
     public static void load() {

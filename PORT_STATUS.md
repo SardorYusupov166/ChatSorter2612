@@ -1,14 +1,17 @@
 # ChatSorter 1.3.3 -> Minecraft 26.1.2
 
-STATUS: NOT PORTED / NOT COMPILE-VERIFIED.
+STATUS: SOURCE API PORT (NOT COMPILE-VERIFIED, NOT GAME-TESTED).
 
-The original source uses Yarn names from Minecraft 1.21.11. Minecraft 26.1.2 uses official mappings, so the source must be migrated. Changing Gradle coordinates alone is insufficient.
+This archive is a substantive adaptation of the 1.21.x ChatSorter sources to Mojang names / Minecraft 26.1.2, not merely a diagnostics workspace.
 
-Known migration areas:
-- MinecraftClient, Text, DrawContext, ChatHud, ChatHudLine, Screen, ChatScreen, widgets
-- ChatHudMixin targets and injection method descriptors
-- Fabric HUD rendering callback and rendering APIs
-- SoundEvents and sound registry lookup
-- text wrapping, input, and keyboard handling
+Changed:
+- Yarn MinecraftClient/Text/ChatHud/DrawContext/Screen/EditBox APIs replaced by official Minecraft/Component/ChatComponent/GuiGraphicsExtractor types.
+- Filters use ChatComponent.setVisibleMessageFilter(Predicate<GuiMessage>) and preserve original vanilla messages rather than clear-and-replay.
+- ChatComponentMixin captures new player/system messages, ChatScreenMixin handles tabs/search/copy, and the ChatComponentAccess accessor reads GuiMessage.Line records.
+- HUD unread badge ported to HudElementRegistry; sounds ported to BuiltInRegistries.SOUND_EVENT.getValue(Identifier).
+- The settings / key setup screens use the updated 26.1.2 GUI and input signatures; original keyword rules, themes, logging, and notifications kept.
+- The bundled GitHub Actions workflow uses Java 25 and uploads compilation logs regardless of success.
 
-The workflow captures compile-log.txt even when compilation fails. This is a diagnostic workspace, not a playable mod.
+Verification: The ZIP and Java source trees have been checked locally, and class/method names were cross-checked against 26.1.2 Minecraft API reference. This environment has Java 21 and no external Gradle dependency access, hence a true 26.1.2 compile or in-game Mixin verification WAS NOT possible. Expect that follow-up compiler/runtime fixes may still be necessary.
+
+IMPORTANT: The archive is source code, not a playable JAR. Upload all project files, including .github, to your ChatSorter2612 repository and run GitHub Actions. If it fails, send the FIRST build errors (or attach the compilation log artifact). If it builds, test on a local world before connecting to multiplayer.

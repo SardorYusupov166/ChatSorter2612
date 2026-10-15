@@ -1,7 +1,9 @@
 package dev.chatsorter;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.sound.SoundEvents;
+import net.minecraft.client.Minecraft;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
 import java.nio.file.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
@@ -20,7 +22,7 @@ public final class KeywordAlerts {
     public static List<String> sounds() {
         if (soundIds.isEmpty()) {
             List<String> ids = new ArrayList<>();
-            for (net.minecraft.util.Identifier id : net.minecraft.registry.Registries.SOUND_EVENT.getIds()) ids.add(id.toString());
+            for (Identifier id : BuiltInRegistries.SOUND_EVENT.keySet()) ids.add(id.toString());
             ids.sort(String.CASE_INSENSITIVE_ORDER);
             soundIds = List.copyOf(ids);
         }
@@ -33,11 +35,11 @@ public final class KeywordAlerts {
         saveSettings();
     }
     public static void preview() {
-        MinecraftClient mc = MinecraftClient.getInstance();
+        Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || volume <= 0) return;
-        net.minecraft.util.Identifier id = net.minecraft.util.Identifier.tryParse(soundId);
+        Identifier id = Identifier.tryParse(soundId);
         if (id == null) return;
-        net.minecraft.sound.SoundEvent sound = net.minecraft.registry.Registries.SOUND_EVENT.get(id);
+        SoundEvent sound = BuiltInRegistries.SOUND_EVENT.getValue(id);
         if (sound != null) mc.player.playSound(sound, volume, 1.0F);
     }
     private static void saveSettings() {
@@ -93,7 +95,7 @@ public final class KeywordAlerts {
         return HEAD.matcher(message.replaceAll("§[0-9a-fk-orA-FK-OR]", "")
             .replace('\u00a0', ' ').replace('\u200b', ' ')).replaceAll("").strip();
     }
-    private static String ownReason(String message, MinecraftClient mc) {
+    private static String ownReason(String message, Minecraft mc) {
         if (mc.player == null) return "NO_PLAYER";
         String nick = mc.player.getName().getString();
         String s = normalize(message);
@@ -108,7 +110,7 @@ public final class KeywordAlerts {
     }
     public static void notifyIfMatched(String message) {
         if (words.isEmpty()) return;
-        MinecraftClient mc = MinecraftClient.getInstance();
+        Minecraft mc = Minecraft.getInstance();
         String reason = ownReason(message, mc);
         String normalized = normalize(message);
         java.util.regex.Matcher chatLine = CHAT_AUTHOR.matcher(normalized);
