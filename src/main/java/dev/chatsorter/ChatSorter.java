@@ -90,7 +90,7 @@ public class ChatSorter implements ClientModInitializer {
                     .append(Text.literal("mlpgod").styled(style -> style.withColor(0xFFFFFF))));
                 client.inGameHud.getChatHud().addMessage(Text.literal("Сервер: ").styled(style -> style.withColor(0xFFCC55))
                     .append(Text.literal("MigosMC").styled(style -> style.withColor(0xFFFFFF))));
-                client.inGameHud.getChatHud().addMessage(Text.literal("ChatSorter 1.1.15 | mlpgod - MigosMC").styled(style -> style.withColor(0xAAAAAA)));
+                client.inGameHud.getChatHud().addMessage(Text.literal("ChatSorter 1.3.3 | mlpgod - MigosMC").styled(style -> style.withColor(0xAAAAAA)));
             });
         });
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> { ChatSorterDiagnostics.endSession(); reset(); });
@@ -98,7 +98,7 @@ public class ChatSorter implements ClientModInitializer {
 
     public static boolean capture(Text message) {
         if (replaying) return true;
-        Tab tab = message.getString().startsWith("[ChatSorter]") || message.getString().startsWith("Автор: ") || message.getString().startsWith("Сервер: ") || message.getString().startsWith("ChatSorter 1.1.15 |")
+        Tab tab = message.getString().startsWith("[ChatSorter]") || message.getString().startsWith("Автор: ") || message.getString().startsWith("Сервер: ") || message.getString().startsWith("ChatSorter 1.3.3 |")
             ? Tab.NEARBY : classify(message.getString());
         KeywordAlerts.notifyIfMatched(message.getString());
         ChatSorterDiagnostics.record(message, tab.name(), selected.name(), tab == selected || selected == Tab.ALL);
